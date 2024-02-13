@@ -3,6 +3,12 @@ from discord.ext import commands
 import asyncio
 from datetime import datetime, timedelta
 
+import os
+from dotenv import load_dotenv
+
+load_dotenv()  # Load environment variables from a .env file
+BOT_API = os.getenv('DISCORD_TOKEN')
+
 # Define the required intents
 intents = discord.Intents.default()
 intents.messages = True
@@ -52,6 +58,4 @@ async def timer(ctx):
             del timers[ctx.author.id]  # Remove the timer
 
 # Replace 'YOUR_BOT_TOKEN' with your actual bot token
-bot.run('MTIwNjk3MTc3NTc4Nzk5OTIzMg.GhFS_E.V6PBUIw4-LsBtPYZ4lS40S98-Rha0OYZwx1iYE')
-
-#MTIwNjk3MTc3NTc4Nzk5OTIzMg.GhFS_E.V6PBUIw4-LsBtPYZ4lS40S98-Rha0OYZwx1iYE
+bot.run(BOT_API)
