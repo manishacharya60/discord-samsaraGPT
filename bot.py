@@ -44,6 +44,12 @@ async def settimer(ctx, seconds: int):
         await ctx.send(f"{ctx.author.mention} Your timer has ended!")
         del timers[ctx.author.id]  # Remove the timer
 
+@settimer.error
+async def settimer_error(ctx, error):
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("You need to specify the number of seconds for the timer.")
+
+
 @bot.command(name='timer')
 async def timer(ctx):
     if ctx.author.id not in timers:
