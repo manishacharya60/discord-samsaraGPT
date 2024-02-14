@@ -2,18 +2,17 @@ import discord
 from discord.ext import commands
 import asyncio
 from datetime import datetime, timedelta
-
 import os
-from dotenv import load_dotenv
 
-load_dotenv()  # Load environment variables from a .env file
+# Remove the dotenv import and load_dotenv call, as environment variables will be used directly in Azure
+
 BOT_API = os.getenv('DISCORD_TOKEN')
 
 # Define the required intents
 intents = discord.Intents.default()
 intents.messages = True
 intents.guilds = True
-intents.message_content = True
+intents.message_content = True  # Ensure this is enabled in the Discord Developer Portal as well
 
 # Initialize the bot with the specified intents and command prefix
 bot = commands.Bot(command_prefix='!', intents=intents)
@@ -35,27 +34,21 @@ async def settimer(ctx, seconds: int):
     timers[ctx.author.id] = end_time
     
     await ctx.send(f"Timer set for {seconds} seconds.")
-    
-    # Wait for the timer to finish
+    bot.loop.create_task(wait_for_timer(seconds, ctx.author.id))
+
+async def wait_for_timer(seconds, author_id):
     await asyncio.sleep(seconds)
-    
-    # Check if the timer wasn't deleted (e.g., by the !timer command)
-    if ctx.author.id in timers:
-        await ctx.send(f"{ctx.author.mention} Your timer has ended!")
-        del timers[ctx.author.id]  # Remove the timer
-
-@settimer.error
-async def settimer_error(ctx, error):
-    if isinstance(error, commands.MissingRequiredArgument):
-        await ctx.send("You need to specify the number of seconds for the timer.")
-
+    if author_id in timers:
+        channel = bot.get_channel(timers[author_id]['channel'])
+        await channel.send(f"<@{author_id}>, your timer has ended!")
+        del timers[author_id]
 
 @bot.command(name='timer')
 async def timer(ctx):
     if ctx.author.id not in timers:
         await ctx.send("You don't have an active timer.")
     else:
-        remaining_time = timers[ctx.author.id] - datetime.now()
+        remaining_time = timers[ctx.author.id]['end_time'] - datetime.now()
         seconds = int(remaining_time.total_seconds())
         if seconds > 0:
             await ctx.send(f"{ctx.author.mention} Your timer has {seconds} seconds remaining.")
@@ -63,5 +56,13 @@ async def timer(ctx):
             await ctx.send(f"{ctx.author.mention} Your timer has ended!")
             del timers[ctx.author.id]  # Remove the timer
 
-# Replace 'YOUR_BOT_TOKEN' with your actual bot token
+# Handle errors globally to prevent bot from crashing
+@bot.event
+async def on_command_error(ctx, error):
+    if isinstance(error, commands.CommandInvokeError):
+        await ctx.send(f"An error occurred: {str(error)}")
+    else:
+        print(f"An error occurred: {str(error)}")
+
+# Replace 'YOUR_BOT_TOKEN' with your actual bot token is no longer necessary as it is set above
 bot.run(BOT_API)
