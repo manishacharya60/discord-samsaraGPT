@@ -1,14 +1,18 @@
+import os
 import discord
-from discord.ext import commands
 from openai import OpenAI
+from discord.ext import commands
+from dotenv import load_dotenv
 
-client = OpenAI(api_key='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')
+load_dotenv()
+
+client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 import os
 
 # Your OpenAI API key goes here
 
 # Your Discord bot token goes here
-DISCORD_BOT_TOKEN = 'MTIwNjk3MTc3NTc4Nzk5OTIzMg.G5wOHB.GBoOaocuokKkIm5nqPHFav6ivwVgjVXg8NgcBY'
+DISCORD_BOT_TOKEN = os.getenv('DISCORD_TOKEN')
 
 # Intents are required to receive messages from the guild
 intents = discord.Intents.default()
