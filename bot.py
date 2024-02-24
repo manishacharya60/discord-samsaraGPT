@@ -1,68 +1,60 @@
 import discord
 from discord.ext import commands
-import asyncio
-from datetime import datetime, timedelta
+from openai import OpenAI
+
+client = OpenAI(api_key='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')
 import os
 
-# Remove the dotenv import and load_dotenv call, as environment variables will be used directly in Azure
+# Your OpenAI API key goes here
 
-BOT_API = os.getenv('DISCORD_TOKEN')
+# Your Discord bot token goes here
+DISCORD_BOT_TOKEN = 'MTIwNjk3MTc3NTc4Nzk5OTIzMg.G5wOHB.GBoOaocuokKkIm5nqPHFav6ivwVgjVXg8NgcBY'
 
-# Define the required intents
+# Intents are required to receive messages from the guild
 intents = discord.Intents.default()
 intents.messages = True
-intents.guilds = True
-intents.message_content = True  # Ensure this is enabled in the Discord Developer Portal as well
+intents.message_content = True  # Ensure message content intent is enabled in your bot's settings on Discord Developer Portal
 
-# Initialize the bot with the specified intents and command prefix
 bot = commands.Bot(command_prefix='!', intents=intents)
-
-# Dictionary to keep track of timers
-timers = {}
 
 @bot.event
 async def on_ready():
-    print(f'{bot.user} has connected to Discord!')
+    print(f'Logged in as {bot.user.name}')
 
-@bot.command(name='settimer')
-async def settimer(ctx, seconds: int):
-    if seconds <= 0:
-        await ctx.send("Please enter a number of seconds greater than 0.")
-        return
-    
-    end_time = datetime.now() + timedelta(seconds=seconds)
-    timers[ctx.author.id] = end_time
-    
-    await ctx.send(f"Timer set for {seconds} seconds.")
-    bot.loop.create_task(wait_for_timer(seconds, ctx.author.id))
+@bot.command()
+async def ask(ctx, *, question):
+    try:
+        # Call the OpenAI API
+        response = client.chat.completions.create(model="gpt-4",  # Change to the model you are using
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant who helps to understand mathematical and computer concepts in easier ways through real life examples and applications."},
+            {"role": "user", "content": question},
+        ])
+        message = response.choices[0].message.content
+        
+        # Send the response back to the Discord channel
+        await ctx.send(message)
+    except Exception as e:
+        await ctx.send(f'An error occurred: {e}')
 
-async def wait_for_timer(seconds, author_id):
-    await asyncio.sleep(seconds)
-    if author_id in timers:
-        channel = bot.get_channel(timers[author_id]['channel'])
-        await channel.send(f"<@{author_id}>, your timer has ended!")
-        del timers[author_id]
+@bot.command()
+async def generate(ctx, *, prompt):
+    try:
+        # Generate an image with DALL·E
+        response = client.images.generate(
+            model="dall-e-3",
+            prompt=prompt,
+            n=1,
+            quality="standard",
+            size="1024x1024"
+        )
+        # Assuming 'response' contains a URL to the generated image
+        image_url = response.data[0].url
+        embed = discord.Embed(title="Generated Image")
+        embed.set_image(url=image_url)
+        await ctx.send(embed=embed)
+    except Exception as e:
+        await ctx.send(f'An error occurred: {str(e)}')
 
-@bot.command(name='timer')
-async def timer(ctx):
-    if ctx.author.id not in timers:
-        await ctx.send("You don't have an active timer.")
-    else:
-        remaining_time = timers[ctx.author.id]['end_time'] - datetime.now()
-        seconds = int(remaining_time.total_seconds())
-        if seconds > 0:
-            await ctx.send(f"{ctx.author.mention} Your timer has {seconds} seconds remaining.")
-        else:
-            await ctx.send(f"{ctx.author.mention} Your timer has ended!")
-            del timers[ctx.author.id]  # Remove the timer
-
-# Handle errors globally to prevent bot from crashing
-@bot.event
-async def on_command_error(ctx, error):
-    if isinstance(error, commands.CommandInvokeError):
-        await ctx.send(f"An error occurred: {str(error)}")
-    else:
-        print(f"An error occurred: {str(error)}")
-
-# Replace 'YOUR_BOT_TOKEN' with your actual bot token is no longer necessary as it is set above
-bot.run(BOT_API)
+# Run the Discord bot
+bot.run(DISCORD_BOT_TOKEN)
