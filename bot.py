@@ -29,9 +29,11 @@ def truncate_message(message):
         return message[:MAX_LENGTH - 3] + "..."  # Truncate and add ellipsis
     return message
 
+# Split the message into chunks of 2000 characters
 def split_message(message, chunk_size=2000):
     return [message[i:i+chunk_size] for i in range(0, len(message), chunk_size)]
 
+# Paginate the message and add reactions to navigate through the pages
 async def paginate_message(ctx, message, chunk_size=1900):
     """
     Sends a paginated message and adds reactions to navigate through the pages.
@@ -75,6 +77,7 @@ async def paginate_message(ctx, message, chunk_size=1900):
             await msg.clear_reactions()
             break
 
+# Fetch a response from the OpenAI API
 async def fetch_response_from_openai(question: str) -> str:
     try:
         response = client.chat.completions.create(
@@ -88,10 +91,12 @@ async def fetch_response_from_openai(question: str) -> str:
     except Exception as e:
         return f'An error occurred: {e}'
 
+# Event listener for when the bot is ready
 @bot.event
 async def on_ready():
     print(f'Logged in as {bot.user.name}')
 
+# Define a command to ask questions
 @bot.command()
 async def ask(ctx, *, question):
     temp_message = await ctx.send('🔄 Processing your request...')
@@ -99,6 +104,7 @@ async def ask(ctx, *, question):
     await temp_message.edit(content='Here is the information you requested:')
     await paginate_message(ctx, response_text)
 
+# Define a command to generate emoji for the text
 @bot.command()
 async def emoji(ctx, *, question):
     temp_message = await ctx.send('🔄 Processing your request...')
@@ -115,6 +121,27 @@ async def emoji(ctx, *, question):
     except Exception as e:
         await ctx.send(f'An error occurred: {e}')
 
+# Define a command to generate a coding interview question
+@bot.command()
+async def coding(ctx, *, question):
+    temp_message = await ctx.send('🔄 Processing your request...')
+    try:
+        # Call the OpenAI API
+        response = client.chat.completions.create(model="gpt-3.5-turbo",  # Change to the model you are using
+        messages=[
+            {"role": "system", "content": "Generate a coding interview question with a randomly selected difficulty level (easy, medium, or hard). The question should be suitable for a coding interview at top tech companies like Google, Facebook, Amazon, Microsoft, etc. Include the following details in your response, each clearly separated:\n1. **Difficulty Level:** Specify whether the question is easy, medium, or hard.\n2. **Question:** Provide the coding interview question. \n3. **Examples:** Include example inputs and outputs to illustrate how the problem and solution work. \n4. **Solution:** Give a detailed solution to the problem. \n5. **Explanation:** Provide an explanation of how the solution works. \n6. **Time Complexity:** Analyze the time complexity of the solution. \n7. **Space Complexity:** Analyze the space complexity of the solution. \nUse this clear separator (`**`) for each section without deviation. Your response should strictly adhere to this formatting guideline to ensure clarity and consistency."},
+            {"role": "user", "content": question},
+        
+        ])
+
+        print(response)
+        full_message = response.choices[0].message.content
+
+        await temp_message.edit(content=full_message)
+    except Exception as e:
+        await ctx.send(f'An error occurred: {e}')
+
+# Define a command to convert the text to speech
 @bot.command(name='speak', help='Converts text to speech using OpenAI TTS model.')
 async def speak(ctx, *, text: str):
     # Define the path for the temporary speech file
@@ -142,6 +169,7 @@ async def speak(ctx, *, text: str):
         if speech_file_path.exists():
             speech_file_path.unlink()
 
+# Define a command to return the explanation of the given question
 @bot.command(name='explain', help='Converts text to speech using OpenAI TTS model.')
 async def explain(ctx, *, text: str):
     # Define the path for the temporary speech file
@@ -170,6 +198,7 @@ async def explain(ctx, *, text: str):
         if speech_file_path.exists():
             speech_file_path.unlink()
 
+# Define a command to generate an image with DALL·E
 @bot.command()
 async def generate(ctx, *, prompt):
     try:
